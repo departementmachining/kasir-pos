@@ -214,6 +214,8 @@ model Company {
   auditLogs     AuditLog[]
   settings      CompanySetting[]
   loyaltyRules  LoyaltyRule[]
+  sales         Sale[]
+  purchases     Purchase[]
 
   @@map("companies")
 }
@@ -248,6 +250,7 @@ model Branch {
   cashSessions        CashSession[]
   cashTransactions    CashTransaction[]
   expenses            Expense[]
+  stockAdjustments    StockAdjustment[]
   stockTransfersFrom  StockTransfer[]      @relation("TransferFrom")
   stockTransfersTo    StockTransfer[]      @relation("TransferTo")
 
@@ -727,6 +730,7 @@ model Purchase {
   createdBy       User?          @relation("PurchaseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
   items           PurchaseItem[]
+  purchaseReturns PurchaseReturn[]
 
   @@unique([companyId, purchaseNumber])
   @@index([branchId])
