@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type LoginResponse = {
@@ -16,7 +16,7 @@ type LoginResponse = {
   };
 };
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -103,8 +103,7 @@ export default function LoginPage() {
 
       if (!response.ok) {
         throw new Error(
-          data.message ||
-            `Login gagal. HTTP ${response.status}.`
+          data.message || `Login gagal. HTTP ${response.status}.`
         );
       }
 
@@ -248,5 +247,27 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+function LoginLoading() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="text-center">
+        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+
+        <p className="mt-4 text-sm text-slate-500">
+          Memuat halaman login...
+        </p>
+      </div>
+    </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginLoading />}>
+      <LoginForm />
+    </Suspense>
   );
 }
