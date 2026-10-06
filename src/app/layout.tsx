@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Sidebar from "@/components/layout/Sidebar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Kasir POS",
-  description: "Aplikasi Kasir POS",
+  description: "Professional Point of Sale System",
 };
 
 export default function RootLayout({
@@ -24,15 +23,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <Sidebar />
-
-        <main className="ml-64 min-h-screen p-6">
-          {children}
-        </main>
+    <html lang="id">
+      <body className={geistSans.variable + " " + geistMono.variable + " bg-[#f6f8fc] antialiased"}>
+        {children}
       </body>
     </html>
   );
