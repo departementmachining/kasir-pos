@@ -80,20 +80,23 @@ export default function SalesPage() {
 
   const [paymentMethod, setPaymentMethod] =
     useState("cash");
+
   const [payment, setPayment] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] =
     useState(false);
+
   const [printingId, setPrintingId] =
     useState<number | null>(null);
+
+  const [printing, setPrinting] =
+    useState(false);
+
   const [error, setError] = useState("");
 
   const [lastTransaction, setLastTransaction] =
     useState<LastTransaction | null>(null);
-
-  const [printRequested, setPrintRequested] =
-    useState(false);
 
   const [storeSettings, setStoreSettings] =
     useState<StoreSettings>({
@@ -103,14 +106,12 @@ export default function SalesPage() {
       logo: "",
     });
 
-  const [storeSettingsLoaded, setStoreSettingsLoaded] =
-    useState(false);
-
   /*
    * ==========================================================
    * LOAD DATA
    * ==========================================================
    */
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -124,9 +125,11 @@ export default function SalesPage() {
         fetch("/api/products", {
           cache: "no-store",
         }),
+
         fetch("/api/customers", {
           cache: "no-store",
         }),
+
         fetch("/api/sales", {
           cache: "no-store",
         }),
@@ -204,10 +207,9 @@ export default function SalesPage() {
    * LOAD STORE SETTINGS
    * ==========================================================
    */
+
   const loadStoreSettings = async () => {
     try {
-      setStoreSettingsLoaded(false);
-
       const response = await fetch(
         "/api/store",
         {
@@ -216,12 +218,8 @@ export default function SalesPage() {
         },
       );
 
-      const data = await response.json();
-
-      console.log(
-        "STORE API RESPONSE:",
-        data,
-      );
+      const data =
+        await response.json();
 
       if (
         !response.ok ||
@@ -257,11 +255,6 @@ export default function SalesPage() {
             : "",
       };
 
-      console.log(
-        "STORE SETTINGS:",
-        settings,
-      );
-
       setStoreSettings(settings);
 
       return settings;
@@ -279,14 +272,9 @@ export default function SalesPage() {
       });
 
       return null;
-    } finally {
-      setStoreSettingsLoaded(true);
     }
   };
 
-  /*
-   * Load store saat halaman dibuka.
-   */
   useEffect(() => {
     loadStoreSettings();
 
@@ -309,178 +297,17 @@ export default function SalesPage() {
 
   /*
    * ==========================================================
-   * PRINT
-   *
-   * Setiap kali print diminta:
-   * 1. Ambil data toko terbaru.
-   * 2. Update state.
-   * 3. Tunggu render.
-   * 4. Baru window.print().
-   * ==========================================================
-   */
-  useEffect(() => {
-    if (
-      !printRequested ||
-      !lastTransaction
-    ) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const preparePrint = async () => {
-      try {
-        setStoreSettingsLoaded(false);
-
-        const response = await fetch(
-          "/api/store",
-          {
-            method: "GET",
-            cache: "no-store",
-          },
-        );
-
-        const data =
-          await response.json();
-
-        if (
-          !response.ok ||
-          !data.success
-        ) {
-          throw new Error(
-            data.message ||
-              "Gagal mengambil data toko",
-          );
-        }
-
-        const store = data.data;
-
-        const settings: StoreSettings = {
-          storeName:
-            typeof store?.name ===
-            "string"
-              ? store.name.trim()
-              : "",
-
-          address:
-            typeof store?.address ===
-            "string"
-              ? store.address.trim()
-              : "",
-
-          phone:
-            typeof store?.phone ===
-            "string"
-              ? store.phone.trim()
-              : "",
-
-          logo:
-            typeof store?.logo ===
-            "string"
-              ? store.logo.trim()
-              : "",
-        };
-
-        console.log(
-          "DATA TOKO SEBELUM PRINT:",
-          settings,
-        );
-
-        if (cancelled) return;
-
-        /*
-         * Update data toko.
-         */
-        setStoreSettings(settings);
-        setStoreSettingsLoaded(true);
-
-        /*
-         * Beri kesempatan React melakukan
-         * render ulang receipt.
-         */
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            setTimeout(() => {
-              if (cancelled) return;
-
-              const receiptElement =
-                document.getElementById(
-                  "print-receipt",
-                );
-
-              if (!receiptElement) {
-                setError(
-                  "Struk tidak ditemukan.",
-                );
-                setPrintRequested(false);
-                return;
-              }
-
-              /*
-               * Pastikan nama toko sudah
-               * tersedia di DOM.
-               */
-              const receiptText =
-                receiptElement.textContent ||
-                "";
-
-              console.log(
-                "ISI RECEIPT SEBELUM PRINT:",
-                receiptText,
-              );
-
-              document.body.classList.add(
-                "printing-receipt",
-              );
-
-              setPrintRequested(false);
-
-              window.print();
-            }, 200);
-          });
-        });
-      } catch (err) {
-        console.error(
-          "Gagal menyiapkan print:",
-          err,
-        );
-
-        if (!cancelled) {
-          setStoreSettingsLoaded(true);
-          setPrintRequested(false);
-
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Gagal menyiapkan struk",
-          );
-        }
-      }
-    };
-
-    preparePrint();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    printRequested,
-    lastTransaction,
-  ]);
-
-  /*
-   * ==========================================================
    * AFTER PRINT
    * ==========================================================
    */
+
   useEffect(() => {
     const handleAfterPrint = () => {
       document.body.classList.remove(
         "printing-receipt",
       );
 
-      setLastTransaction(null);
-      setPrintRequested(false);
+      setPrinting(false);
     };
 
     window.addEventListener(
@@ -505,6 +332,7 @@ export default function SalesPage() {
    * FILTER PRODUCT
    * ==========================================================
    */
+
   const filteredProducts = useMemo(() => {
     const keyword = search
       .trim()
@@ -530,6 +358,7 @@ export default function SalesPage() {
    * TOTAL
    * ==========================================================
    */
+
   const total = useMemo(
     () =>
       cart.reduce(
@@ -552,6 +381,7 @@ export default function SalesPage() {
    * CART
    * ==========================================================
    */
+
   const addToCart = (
     product: Product,
   ) => {
@@ -665,6 +495,7 @@ export default function SalesPage() {
    * PROCESS TRANSACTION
    * ==========================================================
    */
+
   const processTransaction =
     async () => {
       if (cart.length === 0) {
@@ -726,10 +557,12 @@ export default function SalesPage() {
             "/api/sales",
             {
               method: "POST",
+
               headers: {
                 "Content-Type":
                   "application/json",
               },
+
               body: JSON.stringify({
                 invoice_number:
                   invoice,
@@ -757,8 +590,10 @@ export default function SalesPage() {
                   (item) => ({
                     product_id:
                       item.id,
+
                     quantity:
                       item.qty,
+
                     price:
                       item.price,
                   }),
@@ -792,16 +627,22 @@ export default function SalesPage() {
         const transaction: LastTransaction =
           {
             invoice,
+
             total,
+
             paid:
               paidAmount,
+
             change,
+
             paymentMethod,
+
             customer:
               customer?.name ||
               "Umum",
 
-            cashier: "Admin",
+            cashier:
+              "Admin",
 
             date:
               now.toLocaleDateString(
@@ -817,12 +658,16 @@ export default function SalesPage() {
               (item) => ({
                 code:
                   item.code,
+
                 name:
                   item.name,
+
                 qty:
                   item.qty,
+
                 price:
                   item.price,
+
                 subtotal:
                   item.price *
                   item.qty,
@@ -830,34 +675,26 @@ export default function SalesPage() {
             ),
           };
 
-        /*
-         * Set transaksi terlebih dahulu
-         * agar area receipt dirender.
-         */
         setLastTransaction(
           transaction,
         );
 
-        /*
-         * Reset kasir.
-         */
         setCart([]);
         setSearch("");
         setSelectedCustomer("");
         setPayment("");
         setPaymentMethod("cash");
 
-        /*
-         * Refresh data.
-         */
         await loadData();
 
         /*
-         * Minta print.
-         * useEffect akan mengambil data toko
-         * terbaru sebelum window.print().
+         * Tidak membuka dialog print
+         * secara otomatis.
+         *
+         * User menekan tombol
+         * "Cetak Struk" setelah
+         * struk tampil.
          */
-        setPrintRequested(true);
       } catch (err) {
         console.error(err);
 
@@ -876,15 +713,161 @@ export default function SalesPage() {
 
   /*
    * ==========================================================
-   * MANUAL PRINT
+   * PRINT RECEIPT
    * ==========================================================
    */
-  const printReceipt = () => {
+
+  const printReceipt = async () => {
     if (!lastTransaction) {
       return;
     }
 
-    setPrintRequested(true);
+    try {
+      setPrinting(true);
+      setError("");
+
+      /*
+       * Ambil data toko terbaru.
+       */
+      const response = await fetch(
+        "/api/store",
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
+
+      const data =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !data.success
+      ) {
+        throw new Error(
+          data.message ||
+            "Gagal mengambil data toko",
+        );
+      }
+
+      const store = data.data;
+
+      const settings: StoreSettings = {
+        storeName:
+          typeof store?.name === "string"
+            ? store.name.trim()
+            : "",
+
+        address:
+          typeof store?.address === "string"
+            ? store.address.trim()
+            : "",
+
+        phone:
+          typeof store?.phone === "string"
+            ? store.phone.trim()
+            : "",
+
+        logo:
+          typeof store?.logo === "string"
+            ? store.logo.trim()
+            : "",
+      };
+
+      /*
+       * Simpan data toko terbaru.
+       */
+      setStoreSettings(settings);
+
+      /*
+       * Beri waktu React untuk
+       * merender data toko ke DOM.
+       */
+      await new Promise<void>(
+        (resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              resolve();
+            });
+          });
+        },
+      );
+
+      /*
+       * Pastikan receipt ada.
+       */
+      const receiptElement =
+        document.getElementById(
+          "print-receipt",
+        );
+
+      if (!receiptElement) {
+        throw new Error(
+          "Struk tidak ditemukan.",
+        );
+      }
+
+      /*
+       * Pastikan data toko sudah
+       * terlihat di receipt.
+       */
+      const storeNameElement =
+        document.getElementById(
+          "receipt-store-name",
+        );
+
+      if (
+        settings.storeName &&
+        storeNameElement &&
+        storeNameElement.textContent?.trim() !==
+          settings.storeName
+      ) {
+        /*
+         * Tunggu satu render tambahan.
+         */
+        await new Promise<void>(
+          (resolve) => {
+            setTimeout(resolve, 100);
+          },
+        );
+      }
+
+      /*
+       * Aktifkan mode print.
+       */
+      document.body.classList.add(
+        "printing-receipt",
+      );
+
+      /*
+       * Beri browser kesempatan
+       * menerapkan CSS print.
+       */
+      await new Promise<void>(
+        (resolve) => {
+          requestAnimationFrame(() => {
+            resolve();
+          });
+        },
+      );
+
+      /*
+       * Buka dialog print.
+       */
+      window.print();
+    } catch (err) {
+      console.error(err);
+
+      setPrinting(false);
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Gagal mencetak struk";
+
+      setError(message);
+      alert(message);
+    }
   };
 
   /*
@@ -892,6 +875,7 @@ export default function SalesPage() {
    * HISTORICAL RECEIPT
    * ==========================================================
    */
+
   const printHistoricalReceipt =
     async (
       saleId: number,
@@ -955,7 +939,8 @@ export default function SalesPage() {
             sale.customer_name ||
             "Umum",
 
-          cashier: "Admin",
+          cashier:
+            "Admin",
 
           date:
             date.toLocaleDateString(
@@ -999,27 +984,23 @@ export default function SalesPage() {
         });
 
         /*
-         * useEffect print akan:
-         * - mengambil data toko terbaru
-         * - render ulang struk
-         * - mencetak
+         * Ambil data toko sebelum
+         * tombol cetak digunakan.
          */
-        setPrintRequested(true);
+        await loadStoreSettings();
       } catch (err) {
         console.error(err);
 
         const message =
           err instanceof Error
             ? err.message
-            : "Gagal mencetak transaksi";
+            : "Gagal mengambil transaksi";
 
         setError(message);
 
         alert(message);
       } finally {
-        setTimeout(() => {
-          setPrintingId(null);
-        }, 700);
+        setPrintingId(null);
       }
     };
 
@@ -1028,6 +1009,7 @@ export default function SalesPage() {
    * LOADING
    * ==========================================================
    */
+
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
@@ -1047,6 +1029,7 @@ export default function SalesPage() {
    * PAGE
    * ==========================================================
    */
+
   return (
     <>
       <style jsx global>{`
@@ -1076,12 +1059,15 @@ export default function SalesPage() {
             visibility: hidden !important;
           }
 
-          body.printing-receipt #print-receipt,
-          body.printing-receipt #print-receipt * {
+          body.printing-receipt
+            #print-receipt,
+          body.printing-receipt
+            #print-receipt * {
             visibility: visible !important;
           }
 
-          body.printing-receipt #print-receipt {
+          body.printing-receipt
+            #print-receipt {
             display: block !important;
             position: fixed !important;
             left: 0 !important;
@@ -1119,7 +1105,6 @@ export default function SalesPage() {
       `}</style>
 
       <div className="space-y-5">
-        {/* ERROR */}
         {error && (
           <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 print:hidden">
             <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 font-bold">
@@ -1130,11 +1115,9 @@ export default function SalesPage() {
           </div>
         )}
 
-        {/* ====================================================
-            PRODUK + KERANJANG
-           ==================================================== */}
+        {/* PRODUK + KERANJANG */}
+
         <div className="grid gap-5 lg:grid-cols-3 print:hidden">
-          {/* PRODUK */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -1262,6 +1245,7 @@ export default function SalesPage() {
           </div>
 
           {/* KERANJANG */}
+
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <div>
@@ -1425,9 +1409,8 @@ export default function SalesPage() {
           </div>
         </div>
 
-        {/* ====================================================
-            PEMBAYARAN
-           ==================================================== */}
+        {/* PEMBAYARAN */}
+
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden">
           <div className="mb-5">
             <h2 className="text-base font-bold text-slate-900">
@@ -1530,9 +1513,8 @@ export default function SalesPage() {
           </button>
         </div>
 
-        {/* ====================================================
-            RIWAYAT PENJUALAN
-           ==================================================== */}
+        {/* RIWAYAT */}
+
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm print:hidden">
           <div className="border-b border-slate-100 px-5 py-4">
             <h2 className="text-base font-bold text-slate-900">
@@ -1691,14 +1673,261 @@ export default function SalesPage() {
         </div>
 
         {/* ====================================================
-            RECEIPT / STRUK
+            RECEIPT
            ==================================================== */}
+
+        {lastTransaction && (
+          <div className="print:hidden">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    Struk Siap Dicetak
+                  </h2>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Invoice{" "}
+                    {
+                      lastTransaction.invoice
+                    }
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={
+                    printReceipt
+                  }
+                  disabled={printing}
+                  className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {printing
+                    ? "Menyiapkan..."
+                    : "Cetak Struk"}
+                </button>
+              </div>
+
+              <div className="mx-auto max-w-[80mm] rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="text-center">
+                  {storeSettings.logo && (
+                    <img
+                      src={
+                        storeSettings.logo
+                      }
+                      alt="Logo toko"
+                      className="mx-auto mb-2 h-16 max-w-[55mm] object-contain"
+                    />
+                  )}
+
+                  {storeSettings.storeName && (
+                    <h3 className="text-base font-bold text-slate-900">
+                      {
+                        storeSettings.storeName
+                      }
+                    </h3>
+                  )}
+
+                  {storeSettings.address && (
+                    <p className="text-xs text-slate-600">
+                      {
+                        storeSettings.address
+                      }
+                    </p>
+                  )}
+
+                  {storeSettings.phone && (
+                    <p className="text-xs text-slate-600">
+                      Telp:{" "}
+                      {
+                        storeSettings.phone
+                      }
+                    </p>
+                  )}
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    Struk Penjualan
+                  </p>
+                </div>
+
+                <div className="my-2 border-t border-dashed border-slate-400" />
+
+                <div className="text-xs text-slate-700">
+                  <div className="flex justify-between gap-2">
+                    <span>
+                      Invoice
+                    </span>
+
+                    <span>
+                      {
+                        lastTransaction.invoice
+                      }
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-2">
+                    <span>
+                      Tanggal
+                    </span>
+
+                    <span>
+                      {
+                        lastTransaction.date
+                      }
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-2">
+                    <span>
+                      Waktu
+                    </span>
+
+                    <span>
+                      {
+                        lastTransaction.time
+                      }
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-2">
+                    <span>
+                      Pelanggan
+                    </span>
+
+                    <span className="text-right">
+                      {
+                        lastTransaction.customer
+                      }
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-2">
+                    <span>
+                      Kasir
+                    </span>
+
+                    <span>
+                      {
+                        lastTransaction.cashier
+                      }
+                    </span>
+                  </div>
+                </div>
+
+                <div className="my-2 border-t border-dashed border-slate-400" />
+
+                <div className="space-y-2 text-xs">
+                  {lastTransaction.items.map(
+                    (
+                      item,
+                      index,
+                    ) => (
+                      <div
+                        key={`${item.code}-${index}`}
+                      >
+                        <div className="font-medium text-slate-800">
+                          {item.name}
+                        </div>
+
+                        <div className="flex justify-between gap-2 text-slate-600">
+                          <span>
+                            {
+                              item.qty
+                            }{" "}
+                            x{" "}
+                            {formatRupiah(
+                              item.price,
+                            )}
+                          </span>
+
+                          <span>
+                            {formatRupiah(
+                              item.subtotal,
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    ),
+                  )}
+                </div>
+
+                <div className="my-2 border-t border-dashed border-slate-400" />
+
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between font-bold text-slate-900">
+                    <span>
+                      TOTAL
+                    </span>
+
+                    <span>
+                      {formatRupiah(
+                        lastTransaction.total,
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-slate-700">
+                    <span>
+                      Bayar
+                    </span>
+
+                    <span>
+                      {formatRupiah(
+                        lastTransaction.paid,
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-slate-700">
+                    <span>
+                      Kembalian
+                    </span>
+
+                    <span>
+                      {formatRupiah(
+                        lastTransaction.change,
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between text-slate-700">
+                    <span>
+                      Metode
+                    </span>
+
+                    <span className="uppercase">
+                      {
+                        lastTransaction.paymentMethod
+                      }
+                    </span>
+                  </div>
+                </div>
+
+                <div className="my-3 border-t border-dashed border-slate-400" />
+
+                <div className="text-center text-xs text-slate-600">
+                  <p>
+                    Terima kasih
+                  </p>
+
+                  <p>
+                    Selamat berbelanja
+                    kembali
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ====================================================
+            PRINT RECEIPT
+           ==================================================== */}
+
         {lastTransaction && (
           <div
             id="print-receipt"
             className="hidden w-[80mm] bg-white p-2 text-black"
           >
-            {/* HEADER TOKO */}
             <div className="text-center">
               {storeSettings.logo && (
                 <div className="mb-2 flex justify-center">
@@ -1713,7 +1942,10 @@ export default function SalesPage() {
               )}
 
               {storeSettings.storeName && (
-                <h1 className="text-lg font-bold">
+                <h1
+                  id="receipt-store-name"
+                  className="text-lg font-bold"
+                >
                   {
                     storeSettings.storeName
                   }
@@ -1744,7 +1976,6 @@ export default function SalesPage() {
 
             <div className="my-2 border-t border-dashed border-black" />
 
-            {/* INFORMASI TRANSAKSI */}
             <div className="text-xs">
               <div className="flex justify-between gap-2">
                 <span>
@@ -1809,7 +2040,6 @@ export default function SalesPage() {
 
             <div className="my-2 border-t border-dashed border-black" />
 
-            {/* ITEM */}
             <div className="space-y-2 text-xs">
               {lastTransaction.items.map(
                 (
@@ -1847,7 +2077,6 @@ export default function SalesPage() {
 
             <div className="my-2 border-t border-dashed border-black" />
 
-            {/* TOTAL */}
             <div className="space-y-1 text-xs">
               <div className="flex justify-between font-bold">
                 <span>
@@ -1900,7 +2129,6 @@ export default function SalesPage() {
 
             <div className="my-3 border-t border-dashed border-black" />
 
-            {/* FOOTER */}
             <div className="text-center text-xs">
               <p>
                 Terima kasih
