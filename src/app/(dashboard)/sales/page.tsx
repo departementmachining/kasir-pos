@@ -161,26 +161,66 @@ export default function SalesPage() {
 
   /*
    * LOAD STORE SETTINGS
+   *
+   * Sumber data toko:
+   * /api/store
+   *
+   * Data digunakan oleh receipt/print sehingga
+   * nama toko selalu mengikuti halaman Settings.
    */
   useEffect(() => {
-    const saved =
-      localStorage.getItem("storeSettings");
+    const loadStoreSettings = async () => {
+      try {
+        const response = await fetch("/api/store", {
+          cache: "no-store",
+        });
 
-    if (!saved) return;
+        const data = await response.json();
 
-    try {
-      const settings = JSON.parse(saved);
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.message ||
+              "Gagal mengambil pengaturan toko",
+          );
+        }
 
-      setStoreSettings({
-        storeName:
-          settings.storeName || "Kasir POS",
-        address: settings.address || "",
-        phone: settings.phone || "",
-        logo: settings.logo || "",
-      });
-    } catch (err) {
-      console.error(err);
-    }
+        const store = data.data;
+
+        setStoreSettings({
+          storeName:
+            store.name || "Kasir POS",
+          address:
+            store.address || "",
+          phone:
+            store.phone || "",
+          logo:
+            store.logo || "",
+        });
+      } catch (err) {
+        console.error(
+          "Gagal mengambil pengaturan toko:",
+          err,
+        );
+      }
+    };
+
+    loadStoreSettings();
+
+    const handleStoreUpdated = () => {
+      loadStoreSettings();
+    };
+
+    window.addEventListener(
+      "store-updated",
+      handleStoreUpdated,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "store-updated",
+        handleStoreUpdated,
+      );
+    };
   }, []);
 
   /*
