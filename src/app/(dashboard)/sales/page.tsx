@@ -93,11 +93,14 @@ export default function SalesPage() {
 
   const [storeSettings, setStoreSettings] =
     useState<StoreSettings>({
-      storeName: "Kasir POS",
+      storeName: "",
       address: "",
       phone: "",
       logo: "",
     });
+
+  const [storeSettingsLoaded, setStoreSettingsLoaded] =
+    useState(false);
 
   /*
    * LOAD DATA
@@ -162,20 +165,21 @@ export default function SalesPage() {
   /*
    * LOAD STORE SETTINGS
    *
-   * Sumber data toko:
-   * /api/store
-   *
-   * Data digunakan oleh receipt/print sehingga
-   * nama toko selalu mengikuti halaman Settings.
+   * Sumber data toko berasal dari /api/store.
    */
   useEffect(() => {
     const loadStoreSettings = async () => {
       try {
+        setStoreSettingsLoaded(false);
+
         const response = await fetch("/api/store", {
+          method: "GET",
           cache: "no-store",
         });
 
         const data = await response.json();
+
+        console.log("STORE API RESPONSE:", data);
 
         if (!response.ok || !data.success) {
           throw new Error(
@@ -188,19 +192,36 @@ export default function SalesPage() {
 
         setStoreSettings({
           storeName:
-            store.name || "Kasir POS",
+            typeof store?.name === "string"
+              ? store.name.trim()
+              : "",
           address:
-            store.address || "",
+            typeof store?.address === "string"
+              ? store.address.trim()
+              : "",
           phone:
-            store.phone || "",
+            typeof store?.phone === "string"
+              ? store.phone.trim()
+              : "",
           logo:
-            store.logo || "",
+            typeof store?.logo === "string"
+              ? store.logo.trim()
+              : "",
         });
       } catch (err) {
         console.error(
           "Gagal mengambil pengaturan toko:",
           err,
         );
+
+        setStoreSettings({
+          storeName: "",
+          address: "",
+          phone: "",
+          logo: "",
+        });
+      } finally {
+        setStoreSettingsLoaded(true);
       }
     };
 
@@ -225,21 +246,13 @@ export default function SalesPage() {
 
   /*
    * PRINT SETELAH RECEIPT SELESAI DI-RENDER
-   *
-   * Ini penting supaya:
-   *
-   * Simpan Transaksi
-   *        ↓
-   * lastTransaction dibuat
-   *        ↓
-   * React render struk tersembunyi
-   *        ↓
-   * langsung window.print()
-   *
-   * Tidak perlu menampilkan Transaksi Terakhir.
    */
   useEffect(() => {
-    if (!printRequested || !lastTransaction) {
+    if (
+      !printRequested ||
+      !lastTransaction ||
+      !storeSettingsLoaded
+    ) {
       return;
     }
 
@@ -264,7 +277,11 @@ export default function SalesPage() {
         window.print();
       });
     });
-  }, [printRequested, lastTransaction]);
+  }, [
+    printRequested,
+    lastTransaction,
+    storeSettingsLoaded,
+  ]);
 
   /*
    * AFTER PRINT
@@ -275,14 +292,6 @@ export default function SalesPage() {
         "printing-receipt",
       );
 
-      /*
-       * Hapus data struk setelah dialog
-       * print ditutup.
-       *
-       * Karena tidak ada lagi UI
-       * "Transaksi Terakhir", data ini
-       * hanya diperlukan selama proses print.
-       */
       setLastTransaction(null);
     };
 
@@ -432,16 +441,6 @@ export default function SalesPage() {
 
   /*
    * PROCESS TRANSACTION
-   *
-   * Setelah berhasil:
-   *
-   * 1. Simpan transaksi
-   * 2. Siapkan data struk
-   * 3. Kosongkan kasir
-   * 4. Reload data
-   * 5. Langsung buka dialog print
-   *
-   * Tidak menampilkan Transaksi Terakhir.
    */
   const processTransaction = async () => {
     if (cart.length === 0) {
@@ -516,9 +515,6 @@ export default function SalesPage() {
           Number(selectedCustomer),
       );
 
-      /*
-       * Buat data struk.
-       */
       const transaction: LastTransaction = {
         invoice,
         total,
@@ -561,9 +557,8 @@ export default function SalesPage() {
       await loadData();
 
       /*
-       * Setelah React merender struk tersembunyi,
-       * useEffect akan langsung menjalankan
-       * window.print().
+       * Print menunggu store settings
+       * dan receipt selesai dirender.
        */
       setPrintRequested(true);
     } catch (err) {
@@ -583,9 +578,6 @@ export default function SalesPage() {
 
   /*
    * CETAK STRUK
-   *
-   * Fungsi ini digunakan untuk transaksi
-   * yang sudah tersedia di lastTransaction.
    */
   const printReceipt = () => {
     if (!lastTransaction) return;
@@ -674,10 +666,6 @@ export default function SalesPage() {
         ),
       });
 
-      /*
-       * printRequested dipicu setelah
-       * lastTransaction selesai dirender.
-       */
       setPrintRequested(true);
     } catch (err) {
       console.error(err);
@@ -742,25 +730,10 @@ export default function SalesPage() {
             overflow: visible !important;
           }
 
-          /*
-           * SEMBUNYIKAN SEMUA UI APLIKASI.
-           *
-           * Header
-           * Sidebar
-           * Produk
-           * Keranjang
-           * Pembayaran
-           * Riwayat
-           *
-           * semuanya tidak dicetak.
-           */
           body.printing-receipt * {
             visibility: hidden !important;
           }
 
-          /*
-           * HANYA STRUK YANG DICETAK.
-           */
           body.printing-receipt #print-receipt,
           body.printing-receipt #print-receipt * {
             visibility: visible !important;
@@ -1380,10 +1353,6 @@ export default function SalesPage() {
 
         {/* =====================================================
             AREA CETAK STRUK
-           
-            Tidak terlihat di halaman.
-            Hanya digunakan sebagai sumber
-            isi untuk browser print dialog.
            ===================================================== */}
         {lastTransaction && (
           <div
@@ -1402,9 +1371,11 @@ export default function SalesPage() {
                 </div>
               )}
 
-              <h1 className="text-lg font-bold">
-                {storeSettings.storeName}
-              </h1>
+              {storeSettings.storeName && (
+                <h1 className="text-lg font-bold">
+                  {storeSettings.storeName}
+                </h1>
+              )}
 
               {storeSettings.address && (
                 <p className="text-xs">
