@@ -75,14 +75,18 @@ export default function SalesPage() {
 
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState("");
+  const [selectedCustomer, setSelectedCustomer] =
+    useState("");
 
-  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [paymentMethod, setPaymentMethod] =
+    useState("cash");
   const [payment, setPayment] = useState("");
 
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
-  const [printingId, setPrintingId] = useState<number | null>(null);
+  const [processing, setProcessing] =
+    useState(false);
+  const [printingId, setPrintingId] =
+    useState<number | null>(null);
   const [error, setError] = useState("");
 
   const [lastTransaction, setLastTransaction] =
@@ -103,48 +107,81 @@ export default function SalesPage() {
     useState(false);
 
   /*
+   * ==========================================================
    * LOAD DATA
+   * ==========================================================
    */
   const loadData = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const [productsRes, customersRes, salesRes] =
-        await Promise.all([
-          fetch("/api/products"),
-          fetch("/api/customers"),
-          fetch("/api/sales"),
-        ]);
+      const [
+        productsRes,
+        customersRes,
+        salesRes,
+      ] = await Promise.all([
+        fetch("/api/products", {
+          cache: "no-store",
+        }),
+        fetch("/api/customers", {
+          cache: "no-store",
+        }),
+        fetch("/api/sales", {
+          cache: "no-store",
+        }),
+      ]);
 
-      const productsData = await productsRes.json();
-      const customersData = await customersRes.json();
-      const salesData = await salesRes.json();
+      const productsData =
+        await productsRes.json();
 
-      if (!productsRes.ok || !productsData.success) {
+      const customersData =
+        await customersRes.json();
+
+      const salesData =
+        await salesRes.json();
+
+      if (
+        !productsRes.ok ||
+        !productsData.success
+      ) {
         throw new Error(
           productsData.message ||
             "Gagal mengambil data produk",
         );
       }
 
-      if (!customersRes.ok || !customersData.success) {
+      if (
+        !customersRes.ok ||
+        !customersData.success
+      ) {
         throw new Error(
           customersData.message ||
             "Gagal mengambil data pelanggan",
         );
       }
 
-      if (!salesRes.ok || !salesData.success) {
+      if (
+        !salesRes.ok ||
+        !salesData.success
+      ) {
         throw new Error(
           salesData.message ||
             "Gagal mengambil data penjualan",
         );
       }
 
-      setProducts(productsData.data || []);
-      setCustomers(customersData.data || []);
-      setSales(salesData.data || []);
+      setProducts(
+        productsData.data || [],
+      );
+
+      setCustomers(
+        customersData.data || [],
+      );
+
+      setSales(
+        salesData.data || [],
+      );
     } catch (err) {
       console.error(err);
 
@@ -163,68 +200,94 @@ export default function SalesPage() {
   }, []);
 
   /*
+   * ==========================================================
    * LOAD STORE SETTINGS
-   *
-   * Sumber data toko berasal dari /api/store.
+   * ==========================================================
    */
-  useEffect(() => {
-    const loadStoreSettings = async () => {
-      try {
-        setStoreSettingsLoaded(false);
+  const loadStoreSettings = async () => {
+    try {
+      setStoreSettingsLoaded(false);
 
-        const response = await fetch("/api/store", {
+      const response = await fetch(
+        "/api/store",
+        {
           method: "GET",
           cache: "no-store",
-        });
+        },
+      );
 
-        const data = await response.json();
+      const data = await response.json();
 
-        console.log("STORE API RESPONSE:", data);
+      console.log(
+        "STORE API RESPONSE:",
+        data,
+      );
 
-        if (!response.ok || !data.success) {
-          throw new Error(
-            data.message ||
-              "Gagal mengambil pengaturan toko",
-          );
-        }
-
-        const store = data.data;
-
-        setStoreSettings({
-          storeName:
-            typeof store?.name === "string"
-              ? store.name.trim()
-              : "",
-          address:
-            typeof store?.address === "string"
-              ? store.address.trim()
-              : "",
-          phone:
-            typeof store?.phone === "string"
-              ? store.phone.trim()
-              : "",
-          logo:
-            typeof store?.logo === "string"
-              ? store.logo.trim()
-              : "",
-        });
-      } catch (err) {
-        console.error(
-          "Gagal mengambil pengaturan toko:",
-          err,
+      if (
+        !response.ok ||
+        !data.success
+      ) {
+        throw new Error(
+          data.message ||
+            "Gagal mengambil pengaturan toko",
         );
-
-        setStoreSettings({
-          storeName: "",
-          address: "",
-          phone: "",
-          logo: "",
-        });
-      } finally {
-        setStoreSettingsLoaded(true);
       }
-    };
 
+      const store = data.data;
+
+      const settings: StoreSettings = {
+        storeName:
+          typeof store?.name === "string"
+            ? store.name.trim()
+            : "",
+
+        address:
+          typeof store?.address === "string"
+            ? store.address.trim()
+            : "",
+
+        phone:
+          typeof store?.phone === "string"
+            ? store.phone.trim()
+            : "",
+
+        logo:
+          typeof store?.logo === "string"
+            ? store.logo.trim()
+            : "",
+      };
+
+      console.log(
+        "STORE SETTINGS:",
+        settings,
+      );
+
+      setStoreSettings(settings);
+
+      return settings;
+    } catch (err) {
+      console.error(
+        "Gagal mengambil pengaturan toko:",
+        err,
+      );
+
+      setStoreSettings({
+        storeName: "",
+        address: "",
+        phone: "",
+        logo: "",
+      });
+
+      return null;
+    } finally {
+      setStoreSettingsLoaded(true);
+    }
+  };
+
+  /*
+   * Load store saat halaman dibuka.
+   */
+  useEffect(() => {
     loadStoreSettings();
 
     const handleStoreUpdated = () => {
@@ -245,46 +308,170 @@ export default function SalesPage() {
   }, []);
 
   /*
-   * PRINT SETELAH RECEIPT SELESAI DI-RENDER
+   * ==========================================================
+   * PRINT
+   *
+   * Setiap kali print diminta:
+   * 1. Ambil data toko terbaru.
+   * 2. Update state.
+   * 3. Tunggu render.
+   * 4. Baru window.print().
+   * ==========================================================
    */
   useEffect(() => {
     if (
       !printRequested ||
-      !lastTransaction ||
-      !storeSettingsLoaded
+      !lastTransaction
     ) {
       return;
     }
 
-    setPrintRequested(false);
+    let cancelled = false;
 
-    const receiptElement =
-      document.getElementById(
-        "print-receipt",
-      );
+    const preparePrint = async () => {
+      try {
+        setStoreSettingsLoaded(false);
 
-    if (!receiptElement) {
-      setError("Struk tidak ditemukan.");
-      return;
-    }
+        const response = await fetch(
+          "/api/store",
+          {
+            method: "GET",
+            cache: "no-store",
+          },
+        );
 
-    document.body.classList.add(
-      "printing-receipt",
-    );
+        const data =
+          await response.json();
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.print();
-      });
-    });
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.message ||
+              "Gagal mengambil data toko",
+          );
+        }
+
+        const store = data.data;
+
+        const settings: StoreSettings = {
+          storeName:
+            typeof store?.name ===
+            "string"
+              ? store.name.trim()
+              : "",
+
+          address:
+            typeof store?.address ===
+            "string"
+              ? store.address.trim()
+              : "",
+
+          phone:
+            typeof store?.phone ===
+            "string"
+              ? store.phone.trim()
+              : "",
+
+          logo:
+            typeof store?.logo ===
+            "string"
+              ? store.logo.trim()
+              : "",
+        };
+
+        console.log(
+          "DATA TOKO SEBELUM PRINT:",
+          settings,
+        );
+
+        if (cancelled) return;
+
+        /*
+         * Update data toko.
+         */
+        setStoreSettings(settings);
+        setStoreSettingsLoaded(true);
+
+        /*
+         * Beri kesempatan React melakukan
+         * render ulang receipt.
+         */
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              if (cancelled) return;
+
+              const receiptElement =
+                document.getElementById(
+                  "print-receipt",
+                );
+
+              if (!receiptElement) {
+                setError(
+                  "Struk tidak ditemukan.",
+                );
+                setPrintRequested(false);
+                return;
+              }
+
+              /*
+               * Pastikan nama toko sudah
+               * tersedia di DOM.
+               */
+              const receiptText =
+                receiptElement.textContent ||
+                "";
+
+              console.log(
+                "ISI RECEIPT SEBELUM PRINT:",
+                receiptText,
+              );
+
+              document.body.classList.add(
+                "printing-receipt",
+              );
+
+              setPrintRequested(false);
+
+              window.print();
+            }, 200);
+          });
+        });
+      } catch (err) {
+        console.error(
+          "Gagal menyiapkan print:",
+          err,
+        );
+
+        if (!cancelled) {
+          setStoreSettingsLoaded(true);
+          setPrintRequested(false);
+
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Gagal menyiapkan struk",
+          );
+        }
+      }
+    };
+
+    preparePrint();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     printRequested,
     lastTransaction,
-    storeSettingsLoaded,
   ]);
 
   /*
+   * ==========================================================
    * AFTER PRINT
+   * ==========================================================
    */
   useEffect(() => {
     const handleAfterPrint = () => {
@@ -293,6 +480,7 @@ export default function SalesPage() {
       );
 
       setLastTransaction(null);
+      setPrintRequested(false);
     };
 
     window.addEventListener(
@@ -313,14 +501,18 @@ export default function SalesPage() {
   }, []);
 
   /*
+   * ==========================================================
    * FILTER PRODUCT
+   * ==========================================================
    */
   const filteredProducts = useMemo(() => {
     const keyword = search
       .trim()
       .toLowerCase();
 
-    if (!keyword) return products;
+    if (!keyword) {
+      return products;
+    }
 
     return products.filter(
       (product) =>
@@ -334,34 +526,46 @@ export default function SalesPage() {
   }, [products, search]);
 
   /*
+   * ==========================================================
    * TOTAL
+   * ==========================================================
    */
   const total = useMemo(
     () =>
       cart.reduce(
         (sum, item) =>
-          sum + item.price * item.qty,
+          sum +
+          item.price * item.qty,
         0,
       ),
     [cart],
   );
 
-  const paidAmount = Number(payment) || 0;
-  const change = paidAmount - total;
+  const paidAmount =
+    Number(payment) || 0;
+
+  const change =
+    paidAmount - total;
 
   /*
-   * ADD TO CART
+   * ==========================================================
+   * CART
+   * ==========================================================
    */
-  const addToCart = (product: Product) => {
+  const addToCart = (
+    product: Product,
+  ) => {
     if (product.stock <= 0) {
       alert("Stok produk habis.");
       return;
     }
 
     setCart((current) => {
-      const existing = current.find(
-        (item) => item.id === product.id,
-      );
+      const existing =
+        current.find(
+          (item) =>
+            item.id === product.id,
+        );
 
       if (!existing) {
         return [
@@ -373,32 +577,46 @@ export default function SalesPage() {
         ];
       }
 
-      if (existing.qty >= product.stock) {
-        alert("Jumlah melebihi stok.");
+      if (
+        existing.qty >=
+        product.stock
+      ) {
+        alert(
+          "Jumlah melebihi stok.",
+        );
+
         return current;
       }
 
-      return current.map((item) =>
-        item.id === product.id
-          ? {
-              ...item,
-              qty: item.qty + 1,
-            }
-          : item,
+      return current.map(
+        (item) =>
+          item.id === product.id
+            ? {
+                ...item,
+                qty:
+                  item.qty + 1,
+              }
+            : item,
       );
     });
   };
 
-  /*
-   * INCREASE QTY
-   */
-  const increaseQty = (id: number) => {
+  const increaseQty = (
+    id: number,
+  ) => {
     setCart((current) =>
       current.map((item) => {
-        if (item.id !== id) return item;
+        if (item.id !== id) {
+          return item;
+        }
 
-        if (item.qty >= item.stock) {
-          alert("Jumlah melebihi stok.");
+        if (
+          item.qty >= item.stock
+        ) {
+          alert(
+            "Jumlah melebihi stok.",
+          );
+
           return item;
         }
 
@@ -410,283 +628,405 @@ export default function SalesPage() {
     );
   };
 
-  /*
-   * DECREASE QTY
-   */
-  const decreaseQty = (id: number) => {
+  const decreaseQty = (
+    id: number,
+  ) => {
     setCart((current) =>
       current
         .map((item) =>
           item.id === id
             ? {
                 ...item,
-                qty: item.qty - 1,
+                qty:
+                  item.qty - 1,
               }
             : item,
         )
-        .filter((item) => item.qty > 0),
+        .filter(
+          (item) =>
+            item.qty > 0,
+        ),
     );
   };
 
-  /*
-   * REMOVE ITEM
-   */
-  const removeItem = (id: number) => {
+  const removeItem = (
+    id: number,
+  ) => {
     setCart((current) =>
       current.filter(
-        (item) => item.id !== id,
+        (item) =>
+          item.id !== id,
       ),
     );
   };
 
   /*
+   * ==========================================================
    * PROCESS TRANSACTION
+   * ==========================================================
    */
-  const processTransaction = async () => {
-    if (cart.length === 0) {
-      alert("Keranjang masih kosong.");
-      return;
-    }
-
-    if (payment === "") {
-      alert("Masukkan nominal pembayaran.");
-      return;
-    }
-
-    if (paidAmount < total) {
-      alert("Nominal pembayaran kurang.");
-      return;
-    }
-
-    try {
-      setProcessing(true);
-      setError("");
-
-      const now = new Date();
-
-      const invoice = `INV-${now.getFullYear()}${String(
-        now.getMonth() + 1,
-      ).padStart(2, "0")}${String(
-        now.getDate(),
-      ).padStart(2, "0")}-${String(
-        now.getHours(),
-      ).padStart(2, "0")}${String(
-        now.getMinutes(),
-      ).padStart(2, "0")}${String(
-        now.getSeconds(),
-      ).padStart(2, "0")}`;
-
-      const response = await fetch(
-        "/api/sales",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            invoice_number: invoice,
-            customer_id: selectedCustomer
-              ? Number(selectedCustomer)
-              : null,
-            total_amount: total,
-            paid_amount: paidAmount,
-            change_amount: change,
-            payment_method: paymentMethod,
-            items: cart.map((item) => ({
-              product_id: item.id,
-              quantity: item.qty,
-              price: item.price,
-            })),
-          }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Transaksi gagal",
+  const processTransaction =
+    async () => {
+      if (cart.length === 0) {
+        alert(
+          "Keranjang masih kosong.",
         );
+        return;
       }
 
-      const customer = customers.find(
-        (item) =>
-          item.id ===
-          Number(selectedCustomer),
-      );
+      if (payment === "") {
+        alert(
+          "Masukkan nominal pembayaran.",
+        );
+        return;
+      }
 
-      const transaction: LastTransaction = {
-        invoice,
-        total,
-        paid: paidAmount,
-        change,
-        paymentMethod,
-        customer:
-          customer?.name || "Umum",
-        cashier: "Admin",
-        date: now.toLocaleDateString(
-          "id-ID",
-        ),
-        time: now.toLocaleTimeString(
-          "id-ID",
-        ),
-        items: cart.map((item) => ({
-          code: item.code,
-          name: item.name,
-          qty: item.qty,
-          price: item.price,
-          subtotal:
-            item.price * item.qty,
-        })),
-      };
+      if (paidAmount < total) {
+        alert(
+          "Nominal pembayaran kurang.",
+        );
+        return;
+      }
 
-      setLastTransaction(transaction);
+      try {
+        setProcessing(true);
+        setError("");
 
-      /*
-       * Reset kasir.
-       */
-      setCart([]);
-      setSearch("");
-      setSelectedCustomer("");
-      setPayment("");
-      setPaymentMethod("cash");
+        const now = new Date();
 
-      /*
-       * Refresh data.
-       */
-      await loadData();
+        const invoice = `INV-${now.getFullYear()}${String(
+          now.getMonth() + 1,
+        ).padStart(
+          2,
+          "0",
+        )}${String(
+          now.getDate(),
+        ).padStart(
+          2,
+          "0",
+        )}-${String(
+          now.getHours(),
+        ).padStart(
+          2,
+          "0",
+        )}${String(
+          now.getMinutes(),
+        ).padStart(
+          2,
+          "0",
+        )}${String(
+          now.getSeconds(),
+        ).padStart(
+          2,
+          "0",
+        )}`;
 
-      /*
-       * Print menunggu store settings
-       * dan receipt selesai dirender.
-       */
-      setPrintRequested(true);
-    } catch (err) {
-      console.error(err);
+        const response =
+          await fetch(
+            "/api/sales",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+              body: JSON.stringify({
+                invoice_number:
+                  invoice,
 
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Transaksi gagal";
+                customer_id:
+                  selectedCustomer
+                    ? Number(
+                        selectedCustomer,
+                      )
+                    : null,
 
-      setError(message);
-      alert(message);
-    } finally {
-      setProcessing(false);
-    }
-  };
+                total_amount:
+                  total,
+
+                paid_amount:
+                  paidAmount,
+
+                change_amount:
+                  change,
+
+                payment_method:
+                  paymentMethod,
+
+                items: cart.map(
+                  (item) => ({
+                    product_id:
+                      item.id,
+                    quantity:
+                      item.qty,
+                    price:
+                      item.price,
+                  }),
+                ),
+              }),
+            },
+          );
+
+        const data =
+          await response.json();
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.message ||
+              "Transaksi gagal",
+          );
+        }
+
+        const customer =
+          customers.find(
+            (item) =>
+              item.id ===
+              Number(
+                selectedCustomer,
+              ),
+          );
+
+        const transaction: LastTransaction =
+          {
+            invoice,
+            total,
+            paid:
+              paidAmount,
+            change,
+            paymentMethod,
+            customer:
+              customer?.name ||
+              "Umum",
+
+            cashier: "Admin",
+
+            date:
+              now.toLocaleDateString(
+                "id-ID",
+              ),
+
+            time:
+              now.toLocaleTimeString(
+                "id-ID",
+              ),
+
+            items: cart.map(
+              (item) => ({
+                code:
+                  item.code,
+                name:
+                  item.name,
+                qty:
+                  item.qty,
+                price:
+                  item.price,
+                subtotal:
+                  item.price *
+                  item.qty,
+              }),
+            ),
+          };
+
+        /*
+         * Set transaksi terlebih dahulu
+         * agar area receipt dirender.
+         */
+        setLastTransaction(
+          transaction,
+        );
+
+        /*
+         * Reset kasir.
+         */
+        setCart([]);
+        setSearch("");
+        setSelectedCustomer("");
+        setPayment("");
+        setPaymentMethod("cash");
+
+        /*
+         * Refresh data.
+         */
+        await loadData();
+
+        /*
+         * Minta print.
+         * useEffect akan mengambil data toko
+         * terbaru sebelum window.print().
+         */
+        setPrintRequested(true);
+      } catch (err) {
+        console.error(err);
+
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Transaksi gagal";
+
+        setError(message);
+
+        alert(message);
+      } finally {
+        setProcessing(false);
+      }
+    };
 
   /*
-   * CETAK STRUK
+   * ==========================================================
+   * MANUAL PRINT
+   * ==========================================================
    */
   const printReceipt = () => {
-    if (!lastTransaction) return;
+    if (!lastTransaction) {
+      return;
+    }
 
     setPrintRequested(true);
   };
 
   /*
-   * CETAK TRANSAKSI DARI RIWAYAT
+   * ==========================================================
+   * HISTORICAL RECEIPT
+   * ==========================================================
    */
-  const printHistoricalReceipt = async (
-    saleId: number,
-  ) => {
-    try {
-      setPrintingId(saleId);
-      setError("");
+  const printHistoricalReceipt =
+    async (
+      saleId: number,
+    ) => {
+      try {
+        setPrintingId(saleId);
+        setError("");
 
-      const response = await fetch(
-        `/api/sales/${saleId}`,
-      );
+        const response =
+          await fetch(
+            `/api/sales/${saleId}`,
+            {
+              cache: "no-store",
+            },
+          );
 
-      const data = await response.json();
+        const data =
+          await response.json();
 
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.message ||
-            "Gagal mengambil detail transaksi",
-        );
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.message ||
+              "Gagal mengambil detail transaksi",
+          );
+        }
+
+        const sale =
+          data.data.sale;
+
+        const items =
+          data.data.items;
+
+        const date =
+          new Date(
+            sale.sale_date,
+          );
+
+        setLastTransaction({
+          invoice:
+            sale.invoice_number,
+
+          total: Number(
+            sale.total_amount,
+          ),
+
+          paid: Number(
+            sale.paid_amount,
+          ),
+
+          change: Number(
+            sale.change_amount,
+          ),
+
+          paymentMethod:
+            sale.payment_method,
+
+          customer:
+            sale.customer_name ||
+            "Umum",
+
+          cashier: "Admin",
+
+          date:
+            date.toLocaleDateString(
+              "id-ID",
+            ),
+
+          time:
+            date.toLocaleTimeString(
+              "id-ID",
+            ),
+
+          items: items.map(
+            (item: {
+              code?: string;
+              name?: string;
+              quantity: number;
+              price: number;
+              subtotal: number;
+            }) => ({
+              code:
+                item.code || "-",
+
+              name:
+                item.name ||
+                "Produk",
+
+              qty: Number(
+                item.quantity,
+              ),
+
+              price: Number(
+                item.price,
+              ),
+
+              subtotal:
+                Number(
+                  item.subtotal,
+                ),
+            }),
+          ),
+        });
+
+        /*
+         * useEffect print akan:
+         * - mengambil data toko terbaru
+         * - render ulang struk
+         * - mencetak
+         */
+        setPrintRequested(true);
+      } catch (err) {
+        console.error(err);
+
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Gagal mencetak transaksi";
+
+        setError(message);
+
+        alert(message);
+      } finally {
+        setTimeout(() => {
+          setPrintingId(null);
+        }, 700);
       }
-
-      const sale = data.data.sale;
-      const items = data.data.items;
-
-      const date = new Date(
-        sale.sale_date,
-      );
-
-      setLastTransaction({
-        invoice:
-          sale.invoice_number,
-        total: Number(
-          sale.total_amount,
-        ),
-        paid: Number(
-          sale.paid_amount,
-        ),
-        change: Number(
-          sale.change_amount,
-        ),
-        paymentMethod:
-          sale.payment_method,
-        customer:
-          sale.customer_name ||
-          "Umum",
-        cashier: "Admin",
-        date:
-          date.toLocaleDateString(
-            "id-ID",
-          ),
-        time:
-          date.toLocaleTimeString(
-            "id-ID",
-          ),
-        items: items.map(
-          (item: {
-            code?: string;
-            name?: string;
-            quantity: number;
-            price: number;
-            subtotal: number;
-          }) => ({
-            code:
-              item.code || "-",
-            name:
-              item.name || "Produk",
-            qty: Number(
-              item.quantity,
-            ),
-            price: Number(
-              item.price,
-            ),
-            subtotal: Number(
-              item.subtotal,
-            ),
-          }),
-        ),
-      });
-
-      setPrintRequested(true);
-    } catch (err) {
-      console.error(err);
-
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Gagal mencetak transaksi";
-
-      setError(message);
-      alert(message);
-    } finally {
-      setTimeout(
-        () => setPrintingId(null),
-        700,
-      );
-    }
-  };
+    };
 
   /*
+   * ==========================================================
    * LOADING
+   * ==========================================================
    */
   if (loading) {
     return (
@@ -702,11 +1042,13 @@ export default function SalesPage() {
     );
   }
 
+  /*
+   * ==========================================================
+   * PAGE
+   * ==========================================================
+   */
   return (
     <>
-      {/* =====================================================
-          GLOBAL PRINT CSS
-         ===================================================== */}
       <style jsx global>{`
         @media print {
           @page {
@@ -788,9 +1130,9 @@ export default function SalesPage() {
           </div>
         )}
 
-        {/* =====================================================
+        {/* ====================================================
             PRODUK + KERANJANG
-           ===================================================== */}
+           ==================================================== */}
         <div className="grid gap-5 lg:grid-cols-3 print:hidden">
           {/* PRODUK */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
@@ -812,7 +1154,6 @@ export default function SalesPage() {
               </span>
             </div>
 
-            {/* SEARCH */}
             <div className="relative mb-5">
               <svg
                 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
@@ -1037,7 +1378,6 @@ export default function SalesPage() {
               </div>
             )}
 
-            {/* CUSTOMER */}
             <div className="mt-5 border-t border-slate-100 pt-5">
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Pelanggan
@@ -1071,7 +1411,6 @@ export default function SalesPage() {
               </select>
             </div>
 
-            {/* TOTAL */}
             <div className="mt-5 rounded-xl bg-slate-900 p-4">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm font-medium text-slate-300">
@@ -1086,9 +1425,9 @@ export default function SalesPage() {
           </div>
         </div>
 
-        {/* =====================================================
+        {/* ====================================================
             PEMBAYARAN
-           ===================================================== */}
+           ==================================================== */}
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm print:hidden">
           <div className="mb-5">
             <h2 className="text-base font-bold text-slate-900">
@@ -1191,9 +1530,9 @@ export default function SalesPage() {
           </button>
         </div>
 
-        {/* =====================================================
+        {/* ====================================================
             RIWAYAT PENJUALAN
-           ===================================================== */}
+           ==================================================== */}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm print:hidden">
           <div className="border-b border-slate-100 px-5 py-4">
             <h2 className="text-base font-bold text-slate-900">
@@ -1351,9 +1690,9 @@ export default function SalesPage() {
           </div>
         </div>
 
-        {/* =====================================================
-            AREA CETAK STRUK
-           ===================================================== */}
+        {/* ====================================================
+            RECEIPT / STRUK
+           ==================================================== */}
         {lastTransaction && (
           <div
             id="print-receipt"
@@ -1364,7 +1703,9 @@ export default function SalesPage() {
               {storeSettings.logo && (
                 <div className="mb-2 flex justify-center">
                   <img
-                    src={storeSettings.logo}
+                    src={
+                      storeSettings.logo
+                    }
                     alt="Logo toko"
                     className="h-16 max-w-[55mm] object-contain"
                   />
@@ -1373,20 +1714,26 @@ export default function SalesPage() {
 
               {storeSettings.storeName && (
                 <h1 className="text-lg font-bold">
-                  {storeSettings.storeName}
+                  {
+                    storeSettings.storeName
+                  }
                 </h1>
               )}
 
               {storeSettings.address && (
                 <p className="text-xs">
-                  {storeSettings.address}
+                  {
+                    storeSettings.address
+                  }
                 </p>
               )}
 
               {storeSettings.phone && (
                 <p className="text-xs">
                   Telp:{" "}
-                  {storeSettings.phone}
+                  {
+                    storeSettings.phone
+                  }
                 </p>
               )}
 
@@ -1400,7 +1747,9 @@ export default function SalesPage() {
             {/* INFORMASI TRANSAKSI */}
             <div className="text-xs">
               <div className="flex justify-between gap-2">
-                <span>Invoice</span>
+                <span>
+                  Invoice
+                </span>
 
                 <span>
                   {
@@ -1410,7 +1759,9 @@ export default function SalesPage() {
               </div>
 
               <div className="flex justify-between gap-2">
-                <span>Tanggal</span>
+                <span>
+                  Tanggal
+                </span>
 
                 <span>
                   {
@@ -1420,7 +1771,9 @@ export default function SalesPage() {
               </div>
 
               <div className="flex justify-between gap-2">
-                <span>Waktu</span>
+                <span>
+                  Waktu
+                </span>
 
                 <span>
                   {
@@ -1430,7 +1783,9 @@ export default function SalesPage() {
               </div>
 
               <div className="flex justify-between gap-2">
-                <span>Pelanggan</span>
+                <span>
+                  Pelanggan
+                </span>
 
                 <span className="text-right">
                   {
@@ -1440,7 +1795,9 @@ export default function SalesPage() {
               </div>
 
               <div className="flex justify-between gap-2">
-                <span>Kasir</span>
+                <span>
+                  Kasir
+                </span>
 
                 <span>
                   {
@@ -1455,7 +1812,10 @@ export default function SalesPage() {
             {/* ITEM */}
             <div className="space-y-2 text-xs">
               {lastTransaction.items.map(
-                (item, index) => (
+                (
+                  item,
+                  index,
+                ) => (
                   <div
                     key={`${item.code}-${index}`}
                   >
@@ -1465,7 +1825,10 @@ export default function SalesPage() {
 
                     <div className="flex justify-between gap-2">
                       <span>
-                        {item.qty} x{" "}
+                        {
+                          item.qty
+                        }{" "}
+                        x{" "}
                         {formatRupiah(
                           item.price,
                         )}
@@ -1487,7 +1850,9 @@ export default function SalesPage() {
             {/* TOTAL */}
             <div className="space-y-1 text-xs">
               <div className="flex justify-between font-bold">
-                <span>TOTAL</span>
+                <span>
+                  TOTAL
+                </span>
 
                 <span>
                   {formatRupiah(
@@ -1497,7 +1862,9 @@ export default function SalesPage() {
               </div>
 
               <div className="flex justify-between">
-                <span>Bayar</span>
+                <span>
+                  Bayar
+                </span>
 
                 <span>
                   {formatRupiah(
@@ -1507,7 +1874,9 @@ export default function SalesPage() {
               </div>
 
               <div className="flex justify-between">
-                <span>Kembalian</span>
+                <span>
+                  Kembalian
+                </span>
 
                 <span>
                   {formatRupiah(
@@ -1517,7 +1886,9 @@ export default function SalesPage() {
               </div>
 
               <div className="flex justify-between">
-                <span>Metode</span>
+                <span>
+                  Metode
+                </span>
 
                 <span className="uppercase">
                   {
@@ -1531,10 +1902,13 @@ export default function SalesPage() {
 
             {/* FOOTER */}
             <div className="text-center text-xs">
-              <p>Terima kasih</p>
+              <p>
+                Terima kasih
+              </p>
 
               <p>
-                Selamat berbelanja kembali
+                Selamat berbelanja
+                kembali
               </p>
             </div>
           </div>
